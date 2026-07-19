@@ -8,7 +8,7 @@ optionally attach the volume to a compute instance.
 
 ```hcl
 module "block_volume" {
-  source = "github.com/cybercapybara/terraform-oci-block-volume"
+  source = "github.com/moveeeax/terraform-oci-block-volume"
 
   compartment_id      = var.compartment_id
   availability_domain = var.availability_domain
