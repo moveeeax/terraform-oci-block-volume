@@ -18,6 +18,11 @@ output "attachment_id" {
   value       = try(oci_core_volume_attachment.this[0].id, null)
 }
 
+output "backup_policy_id" {
+  description = "OCID of the backup policy assigned to the volume, or null if none was assigned."
+  value       = one(oci_core_volume_backup_policy_assignment.this[*].policy_id)
+}
+
 output "state" {
   description = "Lifecycle state of the block volume."
   value       = oci_core_volume.this.state
