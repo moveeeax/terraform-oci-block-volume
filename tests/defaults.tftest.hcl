@@ -15,7 +15,7 @@ variables {
 }
 
 override_data {
-  target = data.oci_core_volume_backup_policies.predefined[0]
+  target = data.oci_core_volume_backup_policies.predefined
   values = {
     volume_backup_policies = [{
       compartment_id     = null
