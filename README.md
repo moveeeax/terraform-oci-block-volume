@@ -12,7 +12,7 @@ transit. See [Durability and destroy behaviour](#durability-and-destroy-behaviou
 
 ```hcl
 module "block_volume" {
-  source = "github.com/moveeeax/terraform-oci-block-volume"
+  source = "github.com/moveeeax/terraform-oci-block-volume?ref=v1.0.0"
 
   compartment_id      = var.compartment_id
   availability_domain = var.availability_domain
