@@ -50,6 +50,11 @@ run "defaults_are_durable" {
     condition     = length(oci_core_volume_attachment.this) == 0
     error_message = "No attachment must be created unless attach_to_instance_id is set."
   }
+
+  assert {
+    condition     = oci_core_volume.this.block_volume_replicas_deletion == null
+    error_message = "block_volume_replicas_deletion must stay unset unless remove_replicas is true."
+  }
 }
 
 run "custom_backup_policy_id_is_used" {
@@ -115,6 +120,85 @@ run "in_transit_encryption_can_be_disabled" {
     condition     = oci_core_volume_attachment.this[0].encryption_in_transit_type == "NONE"
     error_message = "Disabling in-transit encryption must map to NONE for iSCSI attachments."
   }
+}
+
+run "replicas_are_passed_through" {
+  command = plan
+
+  variables {
+    replicas = [
+      {
+        availability_domain = "Uocm:PHX-AD-2"
+        display_name        = "test-data-vol-ad2"
+      },
+      {
+        availability_domain = "Uocm:US-ASHBURN-AD-1"
+        xrr_kms_key_id      = "ocid1.key.oc1.iad.aaaaaaaaexamplexrrkey"
+      },
+    ]
+  }
+
+  assert {
+    condition     = length(oci_core_volume.this.block_volume_replicas) == 2
+    error_message = "Every entry in replicas must become a block_volume_replicas block."
+  }
+
+  assert {
+    condition     = oci_core_volume.this.block_volume_replicas[0].availability_domain == "Uocm:PHX-AD-2" && oci_core_volume.this.block_volume_replicas[0].display_name == "test-data-vol-ad2"
+    error_message = "A cross-AD replica must keep its availability_domain and display_name."
+  }
+
+  assert {
+    condition     = oci_core_volume.this.block_volume_replicas[1].xrr_kms_key_id == "ocid1.key.oc1.iad.aaaaaaaaexamplexrrkey"
+    error_message = "A cross-region replica must pass xrr_kms_key_id through."
+  }
+}
+
+run "remove_replicas_sets_deletion_flag" {
+  command = plan
+
+  variables {
+    remove_replicas = true
+  }
+
+  assert {
+    condition     = oci_core_volume.this.block_volume_replicas_deletion == true
+    error_message = "remove_replicas = true must set block_volume_replicas_deletion."
+  }
+}
+
+run "rejects_remove_replicas_with_replicas" {
+  command = plan
+
+  variables {
+    remove_replicas = true
+    replicas        = [{ availability_domain = "Uocm:PHX-AD-2" }]
+  }
+
+  expect_failures = [oci_core_volume.this]
+}
+
+run "rejects_empty_replica_availability_domain" {
+  command = plan
+
+  variables {
+    replicas = [{ availability_domain = " " }]
+  }
+
+  expect_failures = [var.replicas]
+}
+
+run "rejects_duplicate_replica_availability_domain" {
+  command = plan
+
+  variables {
+    replicas = [
+      { availability_domain = "Uocm:PHX-AD-2" },
+      { availability_domain = "uocm:phx-ad-2" },
+    ]
+  }
+
+  expect_failures = [var.replicas]
 }
 
 run "rejects_size_below_minimum" {

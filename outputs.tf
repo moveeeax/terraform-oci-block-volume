@@ -23,6 +23,11 @@ output "backup_policy_id" {
   value       = one(oci_core_volume_backup_policy_assignment.this[*].policy_id)
 }
 
+output "replica_ids" {
+  description = "OCIDs of the block volume replicas, in the order of var.replicas. Empty when no replicas are configured."
+  value       = [for r in oci_core_volume.this.block_volume_replicas : r.block_volume_replica_id]
+}
+
 output "state" {
   description = "Lifecycle state of the block volume."
   value       = oci_core_volume.this.state

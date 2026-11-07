@@ -8,6 +8,9 @@ Because the volume holds data, the module defaults to durable settings: an Oracl
 `bronze` backup policy is assigned unless you opt out, and attachments encrypt data in
 transit. See [Durability and destroy behaviour](#durability-and-destroy-behaviour).
 
+For disaster recovery it can also keep block volume replicas in other availability domains or
+regions. See [Replicas](#replicas).
+
 ## Usage
 
 ```hcl
@@ -34,6 +37,37 @@ module "block_volume" {
 ```
 
 A runnable example lives in [`examples/basic`](examples/basic).
+
+## Replicas
+
+Backups are periodic, so their RPO is hours. `replicas` adds block volume replicas that OCI
+keeps continuously in sync with the volume, either in another availability domain of the same
+region or in an availability domain of another region:
+
+```hcl
+module "block_volume" {
+  # ...
+
+  replicas = [
+    # Cross-AD replica in the same region.
+    { availability_domain = "Uocm:PHX-AD-2" },
+
+    # Cross-region replica, encrypted with a KMS key that lives in the destination region.
+    {
+      availability_domain = "Uocm:US-ASHBURN-AD-1"
+      display_name        = "prod-data-vol-iad"
+      xrr_kms_key_id      = var.ashburn_kms_key_id
+    },
+  ]
+}
+```
+
+`replica_ids` returns the replica OCIDs in the order of `replicas`.
+
+The provider treats the replica list as computed: removing entries from `replicas` does not
+delete the replicas that already exist. To remove all of them, set `replicas = []` together with
+`remove_replicas = true`, apply, then drop `remove_replicas`. Setting `remove_replicas = true`
+while `replicas` is non-empty fails at plan time.
 
 ## Durability and destroy behaviour
 
@@ -62,7 +96,10 @@ via `kms_key_id`. Attachments encrypt data in transit by default; see
 | Name      | Version  |
 |-----------|----------|
 | terraform | >= 1.5   |
-| oci       | >= 5.0   |
+| oci       | >= 6.14  |
+
+The `oci` floor is 6.14 because that is the first provider release whose
+`block_volume_replicas` block accepts `xrr_kms_key_id`.
 
 ## Inputs
 
@@ -74,6 +111,8 @@ via `kms_key_id`. Attachments encrypt data in transit by default; see
 | `size_in_gbs`           | Size of the block volume in GB (whole number, 50-32768).              | `number`      | `50`                |    no    |
 | `vpus_per_gb`           | Performance in VPUs per GB (multiple of 10, 0-120).                   | `number`      | `10`                |    no    |
 | `kms_key_id`            | KMS key OCID for encryption. Null uses Oracle-managed encryption.     | `string`      | `null`              |    no    |
+| `replicas`              | Replicas to keep in other ADs or regions: `availability_domain`, optional `display_name`, `xrr_kms_key_id`. | `list(object)` | `[]` | no |
+| `remove_replicas`       | Delete all existing replicas; use with `replicas = []`.               | `bool`        | `false`             |    no    |
 | `backup_policy`         | Oracle-managed backup policy: `gold`, `silver`, `bronze`, `none`.     | `string`      | `"bronze"`          |    no    |
 | `backup_policy_id`      | User-defined backup policy OCID (set `backup_policy = "none"`).       | `string`      | `null`              |    no    |
 | `attach_to_instance_id` | Instance OCID to attach the volume to. Null skips attachment.         | `string`      | `null`              |    no    |
@@ -91,6 +130,7 @@ via `kms_key_id`. Attachments encrypt data in transit by default; see
 | `is_hydrated`   | Whether the volume finished copying from its source.  |
 | `attachment_id` | OCID of the volume attachment, if attached.           |
 | `backup_policy_id` | OCID of the assigned backup policy, or null.       |
+| `replica_ids`   | OCIDs of the replicas, in the order of `replicas`.     |
 | `state`         | Lifecycle state of the block volume.                  |
 
 ### In-transit encryption

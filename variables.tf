@@ -41,6 +41,33 @@ variable "kms_key_id" {
   default     = null
 }
 
+variable "replicas" {
+  description = "Block volume replicas kept continuously in sync with the volume, for disaster recovery. Each entry names a target availability_domain, in this region (cross-AD) or another one (cross-region). xrr_kms_key_id is the KMS key OCID in the destination region used to encrypt a cross-region replica; null uses Oracle-managed encryption. Empty creates no replicas."
+  type = list(object({
+    availability_domain = string
+    display_name        = optional(string)
+    xrr_kms_key_id      = optional(string)
+  }))
+  default  = []
+  nullable = false
+
+  validation {
+    condition     = alltrue([for r in var.replicas : trimspace(r.availability_domain) != ""])
+    error_message = "Each replica needs a non-empty availability_domain."
+  }
+
+  validation {
+    condition     = length(distinct([for r in var.replicas : lower(r.availability_domain)])) == length(var.replicas)
+    error_message = "Each replica must target a different availability_domain."
+  }
+}
+
+variable "remove_replicas" {
+  description = "Delete every existing replica of the volume. The provider keeps replicas when replicas is simply emptied, so set this to true together with replicas = [] to remove them."
+  type        = bool
+  default     = false
+}
+
 variable "backup_policy" {
   description = "Oracle-managed backup policy to assign to the volume: \"gold\", \"silver\", \"bronze\", or \"none\" to opt out. A volume with no backup policy has no recoverable copy once it is deleted."
   type        = string
