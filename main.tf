@@ -30,8 +30,28 @@ resource "oci_core_volume" "this" {
   vpus_per_gb         = var.vpus_per_gb
   kms_key_id          = var.kms_key_id
 
+  # block_volume_replicas is Optional+Computed in the provider, so dropping the
+  # blocks from config leaves existing replicas in place. Deleting them takes
+  # block_volume_replicas_deletion = true, exposed as remove_replicas.
+  dynamic "block_volume_replicas" {
+    for_each = var.replicas
+    content {
+      availability_domain = block_volume_replicas.value.availability_domain
+      display_name        = block_volume_replicas.value.display_name
+      xrr_kms_key_id      = block_volume_replicas.value.xrr_kms_key_id
+    }
+  }
+  block_volume_replicas_deletion = var.remove_replicas ? true : null
+
   freeform_tags = var.freeform_tags
   defined_tags  = var.defined_tags
+
+  lifecycle {
+    precondition {
+      condition     = !(var.remove_replicas && length(var.replicas) > 0)
+      error_message = "remove_replicas = true deletes every replica of the volume; set replicas = [] when using it."
+    }
+  }
 }
 
 # Without an assignment the volume is never backed up, so `terraform destroy`
