@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-07
+
 ### Added
 
 - `replicas` input that creates block volume replicas in other availability
@@ -21,3 +23,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The minimum `oracle/oci` provider version is now 6.14, the first release
   that accepts `xrr_kms_key_id` on `block_volume_replicas`. Configurations
   pinned to an older provider must upgrade it.
+
+[Unreleased]: https://github.com/moveeeax/terraform-oci-block-volume/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/moveeeax/terraform-oci-block-volume/compare/v1.1.0...v1.2.0
